@@ -1,0 +1,11 @@
+Product,Price,Quantity,Revenue,Category,Rating
+Laptop,999.99,15,14999.85,Electronics,4.5
+Mouse,25.50,45,1147.50,Electronics,4.2
+Keyboard,75.00,30,2250.00,Electronics,4.7
+Monitor,299.99,12,3599.88,Electronics,4.4
+Desk Chair,199.50,8,1596.00,Furniture,4.1
+Notebook,5.99,100,599.00,Stationery,4.0
+Pen Set,12.99,75,974.25,Stationery,4.3
+Coffee Mug,8.50,60,510.00,Kitchen,4.6
+Water Bottle,15.99,40,639.60,Kitchen,4.4
+Backpack,45.00,25,1125.00,Accessories,4.8
