@@ -322,66 +322,100 @@ func max(values ...float64) float64 {
 	return maxVal
 }
 
+// The CalculateTextStats method is part of the CSVAnalyzer struct. Its purpose is to compute specific statistics relevant to
+// text (non-numeric) columns in the CSV dataset. For each identified text column, it determines the total count of non-empty
+// values, the number of unique values, and lists those unique values. It then compiles these statistics into a slice of
+// TextColumnStats structs, which it returns.
+// Defines a method 'CalculateTextStats' for CSVAnalyzer, returning a slice of TextColumnStats structs.
 // CalculateTextStats computes statistics for text columns
 func (ca *CSVAnalyzer) CalculateTextStats() []TextColumnStats {
+	// Declares an empty slice named 'stats' to store the calculated statistics for text columns.
 	var stats []TextColumnStats
-
+	// Iterates through each column index and its numeric status from the dataset's NumericCols map.
 	for colIndex, isNumeric := range ca.dataset.NumericCols {
+		// Checks if the column IS numeric OR if its index is out of bounds for the headers.
 		if isNumeric || colIndex >= len(ca.dataset.Headers) {
+			// If either condition is true (it's numeric or invalid index), skip to the next column as this function is for text columns.
 			continue
 		}
-
+		// Calls a helper method to extract all unique string values from the current column.
 		uniqueValues := ca.extractUniqueValues(colIndex)
-
+		// Creates a new instance of the 'TextColumnStats' struct.
 		colStats := TextColumnStats{
-			Name:         ca.dataset.Headers[colIndex],
-			TotalCount:   ca.countNonEmptyValues(colIndex),
-			UniqueCount:  len(uniqueValues),
+			// Assigns the column header as the name for these text statistics.
+			Name: ca.dataset.Headers[colIndex],
+			// Calls a helper method to count all non-empty values in the current column.
+			TotalCount: ca.countNonEmptyValues(colIndex),
+			// Sets the count of unique values based on the length of the 'uniqueValues' slice.
+			UniqueCount: len(uniqueValues),
+			// Stores the slice of unique values found in the column.
 			UniqueValues: uniqueValues,
 		}
-
+		// Appends the populated 'colStats' struct to the 'stats' slice.
 		stats = append(stats, colStats)
 	}
-
+	// Returns the slice containing statistics for all identified text columns.
 	return stats
 }
 
+// The extractUniqueValues method, part of the CSVAnalyzer struct, is designed to extract all distinct (unique) string values
+// from a specified column of the CSV dataset. It's particularly useful for "text" or "categorical" columns to understand the
+// variety of entries present. It also ensures that the returned list of unique values is sorted for consistent output.
 // extractUniqueValues gets all unique values from a text column
 func (ca *CSVAnalyzer) extractUniqueValues(colIndex int) []string {
+	// Defines a method 'extractUniqueValues' for CSVAnalyzer, taking a column index (int) and returning a slice of unique strings.
 	uniqueMap := make(map[string]bool)
-
+	// Iterates through each 'row' in the dataset's 'Rows'.
 	for _, row := range ca.dataset.Rows {
+		// Checks if the 'colIndex' is a valid index for the current 'row'.
 		if colIndex < len(row) {
+			// Extracts the string value from the specified column in the current row and removes leading/trailing whitespace.
 			value := strings.TrimSpace(row[colIndex])
+			// Checks if the trimmed string 'value' is not empty.
 			if value != "" {
+				// Adds the non-empty value as a key to the map; duplicate values will simply overwrite the existing 'true' entry, effectively storing only unique values.
 				uniqueMap[value] = true
 			}
 		}
 	}
-
 	// Convert map keys to slice
+	// Declares an empty slice of strings to store the unique values from the map.
 	var uniqueValues []string
+	// Iterates over the keys (unique values) of the 'uniqueMap'.
 	for value := range uniqueMap {
+		// Appends each unique value (key) from the map to the 'uniqueValues' slice.
 		uniqueValues = append(uniqueValues, value)
 	}
 
 	// Sort for consistent output
+	// Sorts the 'uniqueValues' slice alphabetically for consistent output order.
 	sort.Strings(uniqueValues)
-
+	// Returns the slice containing all unique, sorted, non-empty string values from the column.
 	return uniqueValues
 }
 
+// The countNonEmptyValues method is part of the CSVAnalyzer struct. Its primary goal is to count how many cells in a specified
+// column of the CSV dataset contain non-empty string values after trimming whitespace. This can be useful for understanding data
+// completeness or for certain types of text-based column analysis.
 // countNonEmptyValues counts non-empty values in a column
+// Defines a method 'countNonEmptyValues' for CSVAnalyzer, taking a column index (int) and returning an integer count.
 func (ca *CSVAnalyzer) countNonEmptyValues(colIndex int) int {
+	// Initializes a counter variable 'count' to zero.
 	count := 0
+	// Iterates through each 'row' in the dataset's 'Rows'.
 	for _, row := range ca.dataset.Rows {
+		// Checks if the 'colIndex' is a valid index within the current 'row' (prevents out-of-bounds access).
 		if colIndex < len(row) {
+			// Extracts the string value from the specified column in the current row and removes leading/trailing whitespace.
 			value := strings.TrimSpace(row[colIndex])
+			// Checks if the trimmed string 'value' is not empty.
 			if value != "" {
+				// If the value is not empty, increments the 'count'.
 				count++
 			}
 		}
 	}
+	// Returns the total count of non-empty values found in the column.
 	return count
 }
 
