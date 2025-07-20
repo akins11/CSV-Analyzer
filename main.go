@@ -30,6 +30,14 @@ type ColumnStats struct {
 	Max    float64
 }
 
+// TextColumnStats holds statistical information for text columns
+type TextColumnStats struct {
+	Name         string
+	TotalCount   int
+	UniqueCount  int
+	UniqueValues []string
+}
+
 // CSVAnalyzer handles the analysis operations
 type CSVAnalyzer struct {
 	dataset *Dataset
@@ -314,6 +322,69 @@ func max(values ...float64) float64 {
 	return maxVal
 }
 
+// CalculateTextStats computes statistics for text columns
+func (ca *CSVAnalyzer) CalculateTextStats() []TextColumnStats {
+	var stats []TextColumnStats
+
+	for colIndex, isNumeric := range ca.dataset.NumericCols {
+		if isNumeric || colIndex >= len(ca.dataset.Headers) {
+			continue
+		}
+
+		uniqueValues := ca.extractUniqueValues(colIndex)
+
+		colStats := TextColumnStats{
+			Name:         ca.dataset.Headers[colIndex],
+			TotalCount:   ca.countNonEmptyValues(colIndex),
+			UniqueCount:  len(uniqueValues),
+			UniqueValues: uniqueValues,
+		}
+
+		stats = append(stats, colStats)
+	}
+
+	return stats
+}
+
+// extractUniqueValues gets all unique values from a text column
+func (ca *CSVAnalyzer) extractUniqueValues(colIndex int) []string {
+	uniqueMap := make(map[string]bool)
+
+	for _, row := range ca.dataset.Rows {
+		if colIndex < len(row) {
+			value := strings.TrimSpace(row[colIndex])
+			if value != "" {
+				uniqueMap[value] = true
+			}
+		}
+	}
+
+	// Convert map keys to slice
+	var uniqueValues []string
+	for value := range uniqueMap {
+		uniqueValues = append(uniqueValues, value)
+	}
+
+	// Sort for consistent output
+	sort.Strings(uniqueValues)
+
+	return uniqueValues
+}
+
+// countNonEmptyValues counts non-empty values in a column
+func (ca *CSVAnalyzer) countNonEmptyValues(colIndex int) int {
+	count := 0
+	for _, row := range ca.dataset.Rows {
+		if colIndex < len(row) {
+			value := strings.TrimSpace(row[colIndex])
+			if value != "" {
+				count++
+			}
+		}
+	}
+	return count
+}
+
 // The PrintReport method is part of the CSVAnalyzer struct and is responsible for formatting and displaying a comprehensive
 // analysis report of the loaded CSV data. This report includes basic dataset information (rows, columns), a breakdown of each
 // column's detected type (Text or Numeric), and detailed statistical analysis (sum, mean, median, standard deviation, min, max)
@@ -348,29 +419,50 @@ func (ca *CSVAnalyzer) PrintReport() {
 	// Calls the 'CalculateStats' method to get the statistical results for numeric columns.
 	stats := ca.CalculateStats()
 	// Checks if the returned 'stats' slice is empty (meaning no numeric columns were found or analyzed).
-	if len(stats) == 0 {
-		// Prints a message indicating no numeric columns for stats.
-		fmt.Println("No Numeric Column Found for Statistical Analysis.")
-		// Exits the function if no numeric columns were found.
-		return
+	if len(stats) > 0 {
+		// Prints a subheading for the statistical analysis section.
+		fmt.Println("Statistical Analysis (Numeric Columns):")
+		// Prints a separator line for readability.
+		fmt.Println("----------------------------------------")
+		// Iterates through each 'ColumnStats' struct in the 'stats' slice.
+		for _, stat := range stats {
+			// Prints the name of the current column (from the 'ColumnStats' struct).
+			fmt.Printf("\n%s:\n", stat.Name)
+			// Prints the count of numeric values for the column.
+			fmt.Printf("  Count:     %d\n", stat.Count)
+			fmt.Printf("  Sum:       %.3f\n", stat.Sum)
+			fmt.Printf("  Mean:      %.3f\n", stat.Mean)
+			fmt.Printf("  Median:    %.3f\n", stat.Median)
+			fmt.Printf("  Std Dev:   %.3f\n", stat.StdDev)
+			fmt.Printf("  Min:       %.3f\n", stat.Min)
+			fmt.Printf("  Max:       %.3f\n", stat.Max)
+		}
 	}
-	// Prints a subheading for the statistical analysis section.
-	fmt.Println("Statistical Analysis (Numeric Columns):")
-	// Prints a separator line for readability.
-	fmt.Println("----------------------------------------")
-	// Iterates through each 'ColumnStats' struct in the 'stats' slice.
-	for _, stat := range stats {
-		// Prints the name of the current column (from the 'ColumnStats' struct).
-		fmt.Printf("\n%s:\n", stat.Name)
-		// Prints the count of numeric values for the column.
-		fmt.Printf("  Count:     %d\n", stat.Count)
-		fmt.Printf("  Sum:       %.3f\n", stat.Sum)
-		fmt.Printf("  Mean:      %.3f\n", stat.Mean)
-		fmt.Printf("  Median:    %.3f\n", stat.Median)
-		fmt.Printf("  Std Dev:   %.3f\n", stat.StdDev)
-		fmt.Printf("  Min:       %.3f\n", stat.Min)
-		fmt.Printf("  Max:       %.3f\n", stat.Max)
+
+	// Show statistics for text columns
+	textStats := ca.CalculateTextStats()
+	if len(textStats) > 0 {
+		fmt.Println("\n\nText Analysis (Text Columns):")
+		fmt.Println("-----------------------------")
+
+		for _, stat := range textStats {
+			fmt.Printf("\n%s:\n", stat.Name)
+			fmt.Printf("  Total Count:  %d\n", stat.TotalCount)
+			fmt.Printf("  Unique Count: %d\n", stat.UniqueCount)
+
+			if stat.UniqueCount <= 100 {
+				fmt.Printf("  Unique Values: %v\n", stat.UniqueValues)
+			} else {
+				fmt.Printf("  Unique Values (first 50): %v\n", stat.UniqueValues[:50])
+				fmt.Printf("  Unique Values (last 50):  %v\n", stat.UniqueValues[len(stat.UniqueValues)-50:])
+			}
+		}
 	}
+
+	if len(stats) == 0 && len(textStats) == 0 {
+		fmt.Println("No columns found for analysis.")
+	}
+
 }
 
 // The createSampleData function serves as a utility to programmatically generate a CSV file with predefined sample sales data.
